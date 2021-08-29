@@ -45,6 +45,7 @@ def iqr():
 (select approx_quantiles(total_amount, 100) q from `analytics-bootcamp-323516.week1.trips_2015` )
     """).assign(iqr=lambda x: x.q75 - x.q25)
 
+
 @st.cache
 def iqr2():
     return bq.run_sql("""
