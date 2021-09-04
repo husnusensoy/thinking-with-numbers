@@ -4,10 +4,11 @@ EOL = "Estimates of Location"
 EOV = "Estimates of Variability"
 DIST = "Exploring the Data Distribution"
 THEO = "Central Limit"
-TEST = "Statistical Test (Intro)"
+PERM = "Permutation"
+# TEST = "Statistical Test (Intro)"
 
 if __name__ == '__main__':
-    section = st.sidebar.radio("Section", [EOL, EOV, DIST, THEO, TEST])
+    section = st.sidebar.radio("Section", [EOL, EOV, DIST, THEO, PERM])
 
     if section == EOL:
         from estimates_of_location import render
@@ -17,7 +18,7 @@ if __name__ == '__main__':
         from data_distribution import render
     elif section == THEO:
         from theorem import render
-    elif section == TEST:
-        from pair import render
+    elif section == PERM:
+        from perm import render
 
     render()
