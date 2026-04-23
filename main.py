@@ -9,8 +9,8 @@ PERM = "Permutation"
 TS = "Timeseries"
 CLUSTER = "Cluster"
 
-if __name__ == '__main__':
-    section = st.sidebar.radio("Section", [EOL, EOV, DIST, THEO, PERM, TS,CLUSTER])
+if __name__ == "__main__":
+    section = st.sidebar.radio("Section", [EOL, EOV, DIST, THEO, PERM, TS, CLUSTER])
 
     if section == EOL:
         from estimates_of_location import render

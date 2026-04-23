@@ -1,7 +1,7 @@
-from bq import run_sql
-
-import streamlit as st
 import pydeck as pdk
+import streamlit as st
+
+from bq import run_sql
 
 
 @st.cache(allow_output_mutation=True)
@@ -16,7 +16,7 @@ LIMIT
 
     color_lookup = pdk.data_utils.assign_random_colors(df.centroid_id)
     # st.write(color_lookup.get(str(1)))
-    df['color'] = df.centroid_id.apply(lambda row: color_lookup.get(str(row)))
+    df["color"] = df.centroid_id.apply(lambda row: color_lookup.get(str(row)))
 
     return df
 
@@ -31,21 +31,23 @@ def render():
 
     st.pydeck_chart(
         pdk.Deck(
-            map_style='mapbox://styles/mapbox/light-v9', initial_view_state=pdk.ViewState(
+            map_style="mapbox://styles/mapbox/light-v9",
+            initial_view_state=pdk.ViewState(
                 latitude=40.04699,
                 longitude=-72.69647,
                 zoom=11,
                 pitch=10,
-            ), layers=[
-
+            ),
+            layers=[
                 pdk.Layer(
-                    'ScatterplotLayer',
+                    "ScatterplotLayer",
                     data=points,
-                    get_position='[lon, lat]',
-                    get_fill_color='color',
-                    get_line_color='[0, 0, 0]',
+                    get_position="[lon, lat]",
+                    get_fill_color="color",
+                    get_line_color="[0, 0, 0]",
                     get_radius=st.slider("Pickup Points Size", 50, 100, 50, 5),
                 ),
             ],
-        ), use_container_width=True
+        ),
+        use_container_width=True,
     )

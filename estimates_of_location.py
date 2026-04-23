@@ -1,10 +1,13 @@
 import streamlit as st
+
 import bq
 
 
 @st.cache
 def mean():
-    return bq.run_sql("select avg(total_amount) mean from `analytics-bootcamp-323516.week1.trips_2015`")['mean'][0]
+    return bq.run_sql(
+        "select avg(total_amount) mean from `analytics-bootcamp-323516.week1.trips_2015`"
+    )["mean"][0]
 
 
 @st.cache
@@ -24,24 +27,24 @@ FROM (
       total_amount
     FROM
       `analytics-bootcamp-323516.week1.trips_2015` ) )
-    """)['wmean'][0]
+    """)["wmean"][0]
 
 
 @st.cache
 def truncated_mean(p):
     return bq.run_sql(f"""
-    select avg(total_amount) tmean from 
-(select total_amount, cume_dist() over(order by total_amount) p 
+    select avg(total_amount) tmean from
+(select total_amount, cume_dist() over(order by total_amount) p
 from `analytics-bootcamp-323516.week1.trips_2015` )
 where p between {p} and {1 - p}
-    """)['tmean'][0]
+    """)["tmean"][0]
 
 
 @st.cache
 def median():
     return bq.run_sql(
-        "select  percentile_cont(total_amount, 0.5) over() median from `analytics-bootcamp-323516.week1.trips_2015` limit 1")[
-        'median'][0]
+        "select  percentile_cont(total_amount, 0.5) over() median from `analytics-bootcamp-323516.week1.trips_2015` limit 1"
+    )["median"][0]
 
 
 def render():

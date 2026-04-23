@@ -1,34 +1,38 @@
-import pandas as pd
-import streamlit as st
-
-import seaborn as sns
-import numpy as np
 import random
 
-import scipy.stats as stats
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import streamlit as st
+from scipy import stats
 
 
-def perm_diff(s, nA, nB):
-    all_index = list(range(nA + nB))
+def perm_diff(s, n_a, n_b):
+    all_index = list(range(n_a + n_b))
 
-    idx_A = set(random.sample(all_index, nA))
+    idx_a = set(random.sample(all_index, n_a))
 
-    idx_B = set(all_index) - idx_A
+    idx_b = set(all_index) - idx_a
 
-    mean_a = s.loc[idx_A].mean()
+    mean_a = s.loc[idx_a].mean()
 
-    mean_b = s.loc[idx_B].mean()
+    mean_b = s.loc[idx_b].mean()
 
     return mean_b - mean_a
 
 
 def conversion_rate():
     st.subheader("A Conversion Rate Example")
-    conv = pd.DataFrame.from_dict(dict(outcome=['Conversion', 'No conversion'], price_a=[200, 23539],
-                                       price_b=[182, 22406]))
+    conv = pd.DataFrame.from_dict(
+        {
+            "outcome": ["Conversion", "No conversion"],
+            "price_a": [200, 23539],
+            "price_b": [182, 22406],
+        }
+    )
     st.dataframe(conv)
 
-    obs_diff = (200 / 23539 - 182 / 22406)
+    obs_diff = 200 / 23539 - 182 / 22406
     st.write(f"Observed difference in conv rates is {obs_diff:.5f}")
 
     balls = [0] * (23539 + 22406)
@@ -42,10 +46,11 @@ def conversion_rate():
     diffs = run_simulation(balls)
 
     st.write(
-        f"Observed difference {obs_diff} (or more) probable in {np.mean(np.array(diffs) > obs_diff):.4f} trials out of 1000 trial")
+        f"Observed difference {obs_diff} (or more) probable in {np.mean(np.array(diffs) > obs_diff):.4f} trials out of 1000 trial"
+    )
 
-    fig = sns.histplot(data=pd.DataFrame.from_dict(dict(diff=diffs)))
-    fig.axvline(obs_diff, ls='--', c='r')
+    fig = sns.histplot(data=pd.DataFrame.from_dict({"diff": diffs}))
+    fig.axvline(obs_diff, ls="--", c="r")
     st.write(fig, x="diff")
     st.pyplot()
 
@@ -77,31 +82,37 @@ def render():
 def perm_var(sess):
     df = sess.copy()
 
-    df['Time'] = np.random.permutation(df['Time'].values)
-    return df.groupby('Page').mean().var()[0]
+    df["Time"] = np.random.permutation(df["Time"].values)
+    return df.groupby("Page").mean().var()[0]
 
 
 def anova():
-    session = pd.DataFrame.from_dict(dict(
-        Time=[164, 172, 177, 156, 195] + [178, 191, 182, 185, 177] + [175, 193, 171, 163, 176] + [155, 166, 164,
-                                                                                                  170, 168],
-        Page=['Page 1'] * 5 + ['Page 2'] * 5 + ['Page 3'] * 5 + ['Page 4'] * 5))
+    raw_data = {
+        "Page 1": [164, 172, 177, 156, 195],
+        "Page 2": [178, 191, 182, 185, 177],
+        "Page 3": [175, 193, 171, 163, 176],
+        "Page 4": [155, 166, 164, 170, 168],
+    }
+
+    session = pd.DataFrame(raw_data).melt(var_name="Page", value_name="Time")
 
     st.dataframe(session)
     st.write(session.Time.mean())
-    st.dataframe(session.groupby('Page').mean())
-    st.dataframe(session.groupby('Page').var())
+    st.dataframe(session.groupby("Page").mean())
+    st.dataframe(session.groupby("Page").var())
 
-    obs_var = session.groupby('Page').mean().var()[0]
+    obs_var = session.groupby("Page").mean().var()[0]
 
     n_sample = st.slider("Number of samples", 1000, 10_000, value=1000)
     perm_vars = [perm_var(session) for _ in range(n_sample)]
-    #obs_var = session.groupby('Page').var().values
-    fig = sns.histplot(data=pd.DataFrame.from_dict(dict(diff=perm_vars)))
+    # obs_var = session.groupby('Page').var().values
+    fig = sns.histplot(data=pd.DataFrame.from_dict({"diff": perm_vars}))
     st.write(fig, x="diff")
     st.pyplot()
 
-    st.write(f"Pr(Prob) {np.mean([var > obs_var for var in perm_vars]):.4f}... difference in variance {obs_var:.2f} ...")
+    st.write(
+        f"Pr(Prob) {np.mean([var > obs_var for var in perm_vars]):.4f}... difference in variance {obs_var:.2f} ..."
+    )
 
 
 def web_session_experiment():
@@ -119,40 +130,43 @@ def web_session_experiment():
     st.markdown("### BoxPlot for Time Distribution")
     st.write(sns.boxplot(data=session, x="Time", y="Page"))
     st.pyplot()
-    nA, nB = 21, 15
+    n_a, n_b = 21, 15
     if st.checkbox("One Shot Experiment"):
-        one_shot_experiment(nA, nB, session)
+        one_shot_experiment(n_a, n_b, session)
     st.markdown("## Let's Simulate")
-    true_diff = session[session.Page == 'Page B'].mean() - session[session.Page == 'Page A'].mean()
+    true_diff = session[session.Page == "Page B"].mean() - session[session.Page == "Page A"].mean()
     # st.write(true_diff)
-    perm_diffs = [perm_diff(session.Time, nA, nB) for _ in range(1000)]
+    perm_diffs = [perm_diff(session.Time, n_a, n_b) for _ in range(1000)]
     st.write(
-        f"Observed difference {true_diff[0]:.4f} (or more) probable in {np.mean(np.array(perm_diffs) > true_diff[0]):.4f} trials out of 1000 trial")
-    fig = sns.histplot(data=pd.DataFrame.from_dict(dict(diff=perm_diffs)))
-    fig.axvline(true_diff[0], ls='--', c='r')
+        f"Observed difference {true_diff[0]:.4f} (or more) probable in {np.mean(np.array(perm_diffs) > true_diff[0]):.4f} trials out of 1000 trial"
+    )
+    fig = sns.histplot(data=pd.DataFrame.from_dict({"diff": perm_diffs}))
+    fig.axvline(true_diff[0], ls="--", c="r")
     st.write(fig, x="diff")
     st.pyplot()
 
-    res = stats.ttest_ind(session[session.Page == 'Page A'].Time,
-                          session[session.Page == 'Page B'].Time,
-                          equal_var=False)
-    st.write(f'p-value for single sided test: {res.pvalue / 2:.4f}')
+    res = stats.ttest_ind(
+        session[session.Page == "Page A"].Time,
+        session[session.Page == "Page B"].Time,
+        equal_var=False,
+    )
+    st.write(f"p-value for single sided test: {res.pvalue / 2:.4f}")
 
 
-def one_shot_experiment(nA, nB, session):
+def one_shot_experiment(n_a, n_b, session):
     st.write("This function show details of a single trial")
 
-    all_index = list(range(nA + nB))
+    all_index = list(range(n_a + n_b))
     st.write(all_index)
-    idx_A = set(random.sample(all_index, 21))
-    st.write(idx_A)
-    idx_B = set(all_index) - idx_A
-    st.write(idx_B)
+    idx_a = set(random.sample(all_index, n_a))
+    st.write(idx_a)
+    idx_b = set(all_index) - idx_a
+    st.write(idx_b)
     st.subheader("Sample Set with idx A")
-    mean_a = session.loc[idx_A].Time.mean()
+    mean_a = session.loc[idx_a].Time.mean()
     st.write(mean_a)
     st.subheader("Sample Set with idx B")
-    mean_b = session.loc[idx_B]['Time'].mean()
+    mean_b = session.loc[idx_b]["Time"].mean()
     st.write(mean_b)
     st.subheader("Sample Set Mean time difference in 1 Experiment")
     st.write(mean_b - mean_a)
