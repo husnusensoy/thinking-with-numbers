@@ -1,25 +1,25 @@
-import pandas as pd
-import streamlit as st
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
 import random
 
-import scipy.stats as stats
-from minmax_perm import minmax_perm
-from trend_perm import trend_perm
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import streamlit as st
+from scipy import stats
+
+from .minmax_perm import minmax_perm
+from .trend_perm import trend_perm
 
 
-def perm_diff(s, nA, nB):
-    all_index = list(range(nA + nB))
+def perm_diff(s, n_a, n_b):
+    all_index = list(range(n_a + n_b))
 
-    idx_A = random.sample(all_index, nA)
+    idx_a = set(random.sample(all_index, n_a))
 
-    idx_B = list(set(all_index) - set(idx_A))
+    idx_b = set(all_index) - idx_a
 
-    mean_a = s.loc[idx_A].mean()
+    mean_a = s.loc[idx_a].mean()
 
-    mean_b = s.loc[idx_B].mean()
+    mean_b = s.loc[idx_b].mean()
 
     return mean_b - mean_a
 
@@ -27,11 +27,11 @@ def perm_diff(s, nA, nB):
 def conversion_rate():
     st.subheader("A Conversion Rate Example")
     conv = pd.DataFrame.from_dict(
-        dict(
-            outcome=["Conversion", "No conversion"],
-            price_a=[200, 23539],
-            price_b=[182, 22406],
-        )
+        {
+            "outcome": ["Conversion", "No conversion"],
+            "price_a": [200, 23539],
+            "price_b": [182, 22406],
+        }
     )
     st.dataframe(conv)
 
@@ -44,17 +44,17 @@ def conversion_rate():
     balls = pd.Series(balls)
     st.dataframe(balls)
 
-    st.write(
-        f"One experiment conv rate difference {perm_diff(balls, 23739, 182 + 22406)}"
-    )
+    st.write(f"One experiment conv rate difference {perm_diff(balls, 23739, 182 + 22406)}")
 
     diffs = run_simulation(balls)
 
     st.write(
         f"Observed difference {obs_diff} (or more) probable in {np.mean(np.array(diffs) > obs_diff):.4f} trials out of 1000 trial"
     )
-    fig = sns.histplot(data=pd.DataFrame.from_dict(dict(diff=diffs)), x="diff")
+
+    fig = sns.histplot(data=pd.DataFrame.from_dict({"diff": diffs}))
     fig.axvline(obs_diff, ls="--", c="r")
+    st.write(fig, x="diff")
     st.pyplot()
 
 
@@ -72,9 +72,7 @@ def run_simulation(balls):
 
 def render():
     st.header("To Statistical Testing by Simulation")
-    c = st.sidebar.radio(
-        "Experiment Example", ["session", "price", "water consumption", "ANOVA"]
-    )
+    c = st.sidebar.radio("Experiment Example", ["session", "price", "water consumption", "ANOVA"])
     if c == "session":
         web_session_experiment()
     elif c == "price":
@@ -93,15 +91,14 @@ def perm_var(sess):
 
 
 def anova():
-    session = pd.DataFrame.from_dict(
-        dict(
-            Time=[164, 172, 177, 156, 195]
-            + [178, 191, 182, 185, 177]
-            + [175, 193, 171, 163, 176]
-            + [155, 166, 164, 170, 168],
-            Page=["Page 1"] * 5 + ["Page 2"] * 5 + ["Page 3"] * 5 + ["Page 4"] * 5,
-        )
-    )
+    raw_data = {
+        "Page 1": [164, 172, 177, 156, 195],
+        "Page 2": [178, 191, 182, 185, 177],
+        "Page 3": [175, 193, 171, 163, 176],
+        "Page 4": [155, 166, 164, 170, 168],
+    }
+
+    session = pd.DataFrame(raw_data).melt(var_name="Page", value_name="Time")
 
     st.dataframe(session)
     st.write(session.Time.mean())
@@ -109,11 +106,14 @@ def anova():
     st.dataframe(session.groupby("Page").var())
 
     obs_var = session.groupby("Page").mean().var()[0]
+
+    obs_var = session.groupby("Page").mean().var()[0]
     st.write(f"observed variance: {obs_var:.4f}")
     n_sample = st.slider("Number of samples", 1000, 10_000, value=1000)
     perm_vars = [perm_var(session) for _ in range(n_sample)]
-    fig = sns.histplot(data=pd.DataFrame.from_dict(dict(diff=perm_vars)), x="diff")
-    st.write(fig)
+    # obs_var = session.groupby('Page').var().values
+    fig = sns.histplot(data=pd.DataFrame.from_dict({"diff": perm_vars}))
+    st.write(fig, x="diff")
     st.pyplot()
 
     st.write(
@@ -167,24 +167,19 @@ def web_session_experiment():
     st.markdown("### BoxPlot for Time Distribution")
     st.write(sns.boxplot(data=session, x="Time", y="Page"))
     st.pyplot()
-    nA, nB = 21, 15
+    n_a, n_b = 21, 15
     if st.checkbox("One Shot Experiment"):
-        one_shot_experiment(nA, nB, session)
+        one_shot_experiment(n_a, n_b, session)
     st.markdown("## Let's Simulate")
-    # st.write(session[session.Page == 'Page B']["Time"].mean())
-    true_diff = (
-        session[session.Page == "Page B"]["Time"].mean()
-        - session[session.Page == "Page A"]["Time"].mean()
-    )
+    true_diff = session[session.Page == "Page B"].mean() - session[session.Page == "Page A"].mean()
     # st.write(true_diff)
-
-    perm_diffs = [perm_diff(session.Time, nA, nB) for _ in range(1000)]
+    perm_diffs = [perm_diff(session.Time, n_a, n_b) for _ in range(1000)]
     st.write(
         f"Observed difference {true_diff:.4f} (or more) probable in {np.mean(np.array(perm_diffs) > true_diff):.4f} trials out of 1000 trial"
     )
-    fig = sns.histplot(data=pd.DataFrame.from_dict(dict(diff=perm_diffs)), x="diff")
+    fig = sns.histplot(data=pd.DataFrame.from_dict({"diff": perm_diffs}))
     fig.axvline(true_diff, ls="--", c="r")
-    st.write(fig)
+    st.write(fig, x="diff")
     st.pyplot()
 
     res = stats.ttest_ind(
@@ -204,57 +199,58 @@ def web_session_experiment():
 
     st.write(f"p-value for double sided test: {res.pvalue:.4f}")
 
+
 def water_consumption_experiment():
     st.header("Water Consumption Trend Analysis")
     st.markdown("""
     This experiment analyzes monthly water consumption data from smart meter readings to detect significant trends in different districts.
     """)
 
-    water = pd.read_csv("data/water_consumption.csv",index_col=0)
+    water = pd.read_csv("data/water_consumption.csv", index_col=0)
 
     with st.expander("View Raw Data"):
         st.dataframe(water)
 
     st.subheader("Range Configuration")
-    
+
     range_start, range_end = st.slider(
-        "Select Month Range (MOY)",
-        min_value=1,
-        max_value=12,
-        value=(1, 12),
-        step=1
+        "Select Month Range (MOY)", min_value=1, max_value=12, value=(1, 12), step=1
     )
 
     st.info(f"Analyzing trends from **Month {range_start}** to **Month {range_end}**.")
 
-    filtered_water = water[
-        (water['moy'] >= range_start) & 
-        (water['moy'] <= range_end)
-    ]
+    filtered_water = water[(water["moy"] >= range_start) & (water["moy"] <= range_end)]
 
     st.subheader("Observed Trends")
-    st.markdown("Visualizing the average water consumption trend over the months for each district.")
-    st.line_chart(filtered_water .groupby(['moy', 'district'])['m3'].mean().unstack())
+    st.markdown(
+        "Visualizing the average water consumption trend over the months for each district."
+    )
+    st.line_chart(filtered_water.groupby(["moy", "district"])["m3"].mean().unstack())
 
-    slopes = filtered_water.groupby('district').apply(
-        lambda group: np.polyfit(group['moy'], group['m3'], 1)[0], include_groups=False
-    ).reset_index(name='Observed Slope')
+    slopes = (
+        filtered_water.groupby("district")
+        .apply(lambda group: np.polyfit(group["moy"], group["m3"], 1)[0], include_groups=False)
+        .reset_index(name="Observed Slope")
+    )
 
     st.dataframe(
-        slopes.sort_values('Observed Slope', ascending=False)
-        .style.format({"Observed Slope": "{:.4f}"})
+        slopes.sort_values("Observed Slope", ascending=False).style.format(
+            {"Observed Slope": "{:.4f}"}
+        )
     )
 
     st.subheader("Permutation Test")
     st.markdown("""
-    We will now run the **Trend Permutation Test**. 
+    We will now run the **Trend Permutation Test**.
     * **Slope:** The magnitude and direction of the trend (+/-).
     * **Mean R²:** How consistent the trend is.
     * **P-Value:** Probability that this trend occurred by chance.
     """)
 
-    iterations = st.slider("Number of Permutations", min_value=100, max_value=2000, value=1000, step=100)
-    
+    iterations = st.slider(
+        "Number of Permutations", min_value=100, max_value=2000, value=1000, step=100
+    )
+
     if st.button("Run Permutation Test"):
         with st.spinner(f"Running {iterations} simulations..."):
             results = trend_perm(
@@ -266,26 +262,25 @@ def water_consumption_experiment():
                 range_end=range_end,
                 n_iterations=iterations,
             )
-            
+
             st.success("Test Complete!")
             st.dataframe(results)
 
 
-
-def one_shot_experiment(nA, nB, session):
+def one_shot_experiment(n_a, n_b, session):
     st.write("This function show details of a single trial")
 
-    all_index = list(range(nA + nB))
+    all_index = list(range(n_a + n_b))
     st.write(all_index)
-    idx_A = random.sample(all_index, 21)
-    st.write(idx_A)
-    idx_B = list(set(all_index) - set(idx_A))
-    st.write(idx_B)
+    idx_a = set(random.sample(all_index, n_a))
+    st.write(idx_a)
+    idx_b = set(all_index) - idx_a
+    st.write(idx_b)
     st.subheader("Sample Set with idx A")
-    mean_a = session.loc[idx_A].Time.mean()
+    mean_a = session.loc[idx_a].Time.mean()
     st.write(mean_a)
     st.subheader("Sample Set with idx B")
-    mean_b = session.loc[idx_B]["Time"].mean()
+    mean_b = session.loc[idx_b]["Time"].mean()
     st.write(mean_b)
     st.subheader("Sample Set Mean time difference in 1 Experiment")
     st.write(mean_b - mean_a)

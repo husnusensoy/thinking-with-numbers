@@ -1,8 +1,8 @@
+import seaborn as sns
 import streamlit as st
+from scipy import stats
 
 from bq import run_sql
-import scipy.stats as stats
-import seaborn as sns
 
 
 def brand(brand):
@@ -52,10 +52,12 @@ def render():
 
     for c in list(cands.brand_name):
         cost = brand(c)
-        res = stats.ttest_ind(cost[cost.shipping == 0].price,
-                              cost[cost.shipping == 1].price,
-                              equal_var=False)
-        st.write(f'p-value for single sided test: {res.pvalue / 2} for brand {c}')
+        res = stats.ttest_ind(
+            cost[cost.shipping == 0].price,
+            cost[cost.shipping == 1].price,
+            equal_var=False,
+        )
+        st.write(f"p-value for single sided test: {res.pvalue / 2} for brand {c}")
 
         if res.pvalue / 2 <= 0.05:
             st.write(c)
@@ -67,7 +69,7 @@ def render():
     st.write(fig)
     st.pyplot()
 
-    res = stats.ttest_ind(cost[cost.shipping == 0].price,
-                          cost[cost.shipping == 1].price,
-                          equal_var=False)
-    st.write(f'p-value for single sided test: {res.pvalue / 2}')
+    res = stats.ttest_ind(
+        cost[cost.shipping == 0].price, cost[cost.shipping == 1].price, equal_var=False
+    )
+    st.write(f"p-value for single sided test: {res.pvalue / 2}")

@@ -7,7 +7,7 @@ import bq
 def minmax():
     return bq.run_sql("""
     select max(total_amount) - min(total_amount) rng from `analytics-bootcamp-323516.week1.trips_2015`
-    """)['rng'][0]
+    """)["rng"][0]
 
 
 @st.cache
@@ -19,7 +19,7 @@ def mad():
     0.5) OVER() median
 FROM
   `analytics-bootcamp-323516.week1.trips_2015`)
-    """)['mad'][0]
+    """)["mad"][0]
 
 
 @st.cache
