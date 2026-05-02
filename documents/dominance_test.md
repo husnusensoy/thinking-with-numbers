@@ -1,4 +1,4 @@
-# Dominance Test 
+# Dominance Test
 
 ## Why do we need this?
 When ANOVA has significant findings, it does not report which means are different. This test quantifies the probability that the observed difference on mean —for the highest and lowest performing groups— could have been observed by random chance alone relative to their closest competitors.
@@ -20,10 +20,10 @@ np.fill_diagonal(diff_matrix, np.nan)
 ```
 **Observations and Test Type:**
 
-+ For testing Highest mean (`type` = *greater*), we look for the mininmum difference across pairwise groups. Logic: group with highest mean must be significantly higher than even the second-best group. If it beats the closest rival, it beats every group. 
++ For testing Highest mean (`type` = *greater*), we look for the mininmum difference across pairwise groups. Logic: group with highest mean must be significantly higher than even the second-best group. If it beats the closest rival, it beats every group.
 
 + For testing Lowest mean (`type` = *lesser*), we look for the maximum difference across pairwise groups. Since the differences are negative, the maximum value is the one closest to zero. This represents the gap between the closest rival.
- 
+
 + We filter the results to focus only on the groups in the `control_groups` list. Why a list? Although the test is designed for **one-to-many** comparison. the list argument allows us to screen multiple groups iteratively for exploratory purposes. We expect only one group to return a significant p-value. Testing other groups to confirm they do not share this dominance.
 
 ```python
@@ -55,7 +55,7 @@ shuffled_indices = np.random.permutation(len(df))
 ```
 __If `type` = *greater:*__
 
-+ we calculate pairwise differences between the target group (variable name of the target group is `control`) and all other groups, return the minimum difference to measure the margin against the closest competitor. 
++ we calculate pairwise differences between the target group (variable name of the target group is `control`) and all other groups, return the minimum difference to measure the margin against the closest competitor.
 
 ```python
 if type == "greater":
@@ -74,7 +74,7 @@ if type == "greater":
 ```
 __If `type` = *lesser:*__
 
-+ we apply similar logic above to return the maximum difference to measure the margin against the closest competitor. 
++ we apply similar logic above to return the maximum difference to measure the margin against the closest competitor.
 
 ```python
 elif type == "lesser":

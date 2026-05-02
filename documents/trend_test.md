@@ -1,4 +1,4 @@
-# Trend Test 
+# Trend Test
 
 ## Why do we need this?
 
@@ -8,16 +8,16 @@ This test quantifies the probability that the observed trend has arisen by chanc
 
 **Observations and Metrics**
 
-+ **Trend:** First, we calculate slope on the raw data, which represents the observed magnitude and direction of the change. 
++ **Trend:** First, we calculate slope on the raw data, which represents the observed magnitude and direction of the change.
 
 + **Aggregated $R^2$:** We calculate $R^2$ to provide a measure of the trend's reliability. By taking the mean value for each time point, we filter out individual level noise to reveal the general direction of the group.
 
-+ **$R^2$:** We also retain the $R^2$ calculated on the raw data. While usually low, this metric indicates how much individual behaviour varies around the general trend. 
++ **$R^2$:** We also retain the $R^2$ calculated on the raw data. While usually low, this metric indicates how much individual behaviour varies around the general trend.
 
 ```sql
 WITH filtered_data AS (
     SELECT
-        {group_col},             
+        {group_col},
         {range_col},
         {value_col}
     FROM
@@ -29,7 +29,7 @@ WITH filtered_data AS (
 ),
 
 observed_r2 AS (
-    SELECT 
+    SELECT
         {group_col},
         REGR_R2(mean, {range_col}) as r_squared_mean
     FROM(
@@ -40,18 +40,18 @@ observed_r2 AS (
         FROM
             filtered_data
         GROUP BY
-            1, 2    
+            1, 2
         )
     GROUP BY
         1
 ),
 
 observed_trend AS (
-    SELECT 
+    SELECT
         {group_col},
         REGR_SLOPE({value_col}, {range_col}) as obs_trend,
         REGR_R2({value_col}, {range_col}) as r_squared
-    FROM 
+    FROM
         filtered_data
     GROUP BY
         1
@@ -65,14 +65,14 @@ observed_trend AS (
 
 ```sql
 iterations AS (
-    SELECT 
+    SELECT
         {range_col},
         {group_col},
-        {value_col}, 
+        {value_col},
         iteration
     FROM
         filtered_data
-    CROSS JOIN 
+    CROSS JOIN
         (SELECT EXPLODE(SEQUENCE(1, {n_iterations})) AS iteration)
 ),
 
@@ -95,21 +95,21 @@ shuffled_data AS (
         a.iteration,
         a.{group_col},
         a.{range_col},
-        b.{value_col} 
+        b.{value_col}
     FROM
         (
-        SELECT 
-            *, 
+        SELECT
+            *,
             ROW_NUMBER() OVER (PARTITION BY iteration, {group_col} ORDER BY {range_col}) AS rn
-        FROM 
+        FROM
             iterations
         ) a
     JOIN
         (
-        SELECT 
-            *, 
+        SELECT
+            *,
             ROW_NUMBER() OVER (PARTITION BY iteration, {group_col} ORDER BY rand()) AS random_rn
-        FROM 
+        FROM
             iterations
         ) b
     ON a.iteration = b.iteration AND
@@ -143,25 +143,25 @@ perm_trends AS (
         1,2
 )
 
-SELECT 
+SELECT
     t.{group_col},
     t.obs_trend,
     t.r_squared,
     r.r_squared_mean,
     AVG(
-        CASE 
+        CASE
             WHEN t.obs_trend > 0 AND p.perm_trend >= t.obs_trend THEN 1
             WHEN t.obs_trend < 0 AND p.perm_trend <= t.obs_trend THEN 1
             ELSE 0
         END
     ) AS p_value,
     {n_iterations} AS n_iterations
-FROM 
+FROM
     perm_trends p
-JOIN 
+JOIN
     observed_trend t ON p.{group_col} = t.{group_col}
-JOIN 
+JOIN
     observed_r2 r ON p.{group_col} = r.{group_col}
-GROUP BY 
+GROUP BY
     1,2,3,4
 ```

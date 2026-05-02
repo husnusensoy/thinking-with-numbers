@@ -1,6 +1,6 @@
-import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 # A simple script for generating water consumption data for our trend test with simulation example.
 
@@ -37,25 +37,13 @@ values_outlier = np.abs(np.random.normal(loc=0.4, scale=0.2, size=len(months)))
 random_indices = np.random.choice(len(months), 10, replace=False)
 values_outlier[random_indices] = values_outlier[random_indices] * 5
 
-df_besiktas = pd.DataFrame(
-    {"district": "BESIKTAS", group_col: months, value_col: values_trend}
-)
-df_sariyer = pd.DataFrame(
-    {"district": "SARIYER", group_col: months, value_col: values_no_trend}
-)
-df_kadikoy = pd.DataFrame(
-    {"district": "KADIKOY", group_col: months, value_col: values_seasonal}
-)
-df_uskudar = pd.DataFrame(
-    {"district": "USKUDAR", group_col: months, value_col: values_step}
-)
-df_beyoglu = pd.DataFrame(
-    {"district": "BEYOGLU", group_col: months, value_col: values_outlier}
-)
+df_besiktas = pd.DataFrame({"district": "BESIKTAS", group_col: months, value_col: values_trend})
+df_sariyer = pd.DataFrame({"district": "SARIYER", group_col: months, value_col: values_no_trend})
+df_kadikoy = pd.DataFrame({"district": "KADIKOY", group_col: months, value_col: values_seasonal})
+df_uskudar = pd.DataFrame({"district": "USKUDAR", group_col: months, value_col: values_step})
+df_beyoglu = pd.DataFrame({"district": "BEYOGLU", group_col: months, value_col: values_outlier})
 
-df = pd.concat(
-    [df_besiktas, df_sariyer, df_kadikoy, df_uskudar, df_beyoglu], ignore_index=True
-)
+df = pd.concat([df_besiktas, df_sariyer, df_kadikoy, df_uskudar, df_beyoglu], ignore_index=True)
 df.to_csv("data/water_consumption.csv")
 
 plt.figure(figsize=(10, 6))
