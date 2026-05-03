@@ -1,14 +1,15 @@
-import bq
-import streamlit as st
 import seaborn as sns
+import streamlit as st
+
+import bq
 
 
 @st.cache
 def quantiles():
     return bq.run_sql("""
-select q from 
-(select approx_quantiles(total_amount, 100) quantiles 
-    from `analytics-bootcamp-323516.week1.trips_2015` ), 
+select q from
+(select approx_quantiles(total_amount, 100) quantiles
+    from `analytics-bootcamp-323516.week1.trips_2015` ),
     unnest(quantiles) as q
     """)
 

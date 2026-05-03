@@ -30,4 +30,3 @@ SELECT
 FROM
   summa a JOIN summa b on(a.shipping = 1 and b.shipping =0 and a.brand_name =b.brand_name and a.ccost between b.ccost-5 and b.ccost)
   order by a.n_by_brand desc;
-
