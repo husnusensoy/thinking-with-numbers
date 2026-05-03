@@ -21,7 +21,7 @@ if __name__ == "__main__":
     elif section == THEO:
         from theorem import render
     elif section == PERM:
-        from perm import render
+        from statistical_tests import render
     elif section == TS:
         from ts import render
     elif section == CLUSTER:
