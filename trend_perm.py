@@ -25,7 +25,7 @@ def calculate_trend(
 
 
 def trend_perm(
-    data_path: str,
+    data: pd.DataFrame,
     group_col: str,
     range_col: str,
     value_col: str,
@@ -33,9 +33,7 @@ def trend_perm(
     range_end: int,
     n_iterations: int = 2,
 ):
-    raw = pd.read_csv(data_path)
-
-    duckdb.register("raw", raw)
+    duckdb.register("raw", data)
 
     filtered_data = duckdb.sql(f"""
                                SELECT
@@ -68,16 +66,3 @@ def trend_perm(
         # Store fake_slope for p-value calculation
 
     return pd.DataFrame(observed_trend), pd.DataFrame(fake_trends)
-
-
-if __name__ == "__main__":
-    result = trend_perm(
-        data_path="data/water_consumption.csv",
-        group_col="district",
-        range_col="moy",
-        value_col="m3",
-        range_start=1,
-        range_end=12,
-        n_iterations=1000,
-    )
-    print(result)

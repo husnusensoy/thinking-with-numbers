@@ -1,6 +1,7 @@
-import pandas as pd
+import plotly.express as px
 import streamlit as st
 
+from dataset import make_time_series_data
 from helper import visualize_hist
 from trend_perm import trend_perm
 
@@ -16,7 +17,7 @@ def trend_test():
     This experiment analyzes monthly water consumption data from smart meter readings to detect significant trends in different districts.
     """)
 
-    water = pd.read_csv("data/water_consumption.csv", index_col=0)
+    water = make_time_series_data()
 
     with st.expander("View Raw Data"):
         st.dataframe(water)
@@ -32,10 +33,17 @@ def trend_test():
     filtered_water = water[(water["moy"] >= range_start) & (water["moy"] <= range_end)]
 
     st.subheader("Observed Trends")
-    st.markdown(
-        "Visualizing the average water consumption trend over the months for each district."
+    st.markdown("Visualizing the water consumption trend by month for each district.")
+
+    fig = px.line(
+        filtered_water.groupby(["moy", "district"])["m3"].mean().reset_index(),
+        x="moy",
+        y="m3",
+        color="district",
+        title="Water Consumption by Month and District",
     )
-    st.line_chart(filtered_water.groupby(["moy", "district"])["m3"].mean().unstack())
+    fig.update_layout(xaxis_title="Month of Year", yaxis_title="Water Consumption (m³)")
+    st.plotly_chart(fig, use_container_width=True)
 
     st.subheader("Permutation Test")
     st.markdown("""
@@ -54,7 +62,7 @@ def trend_test():
     )
 
     obs, sim = trend_perm(
-        data_path="data/water_consumption.csv",
+        data=water,
         group_col="district",
         range_col="moy",
         value_col="m3",
@@ -63,13 +71,15 @@ def trend_test():
         n_iterations=n_iterations,
     )
 
-    st.dataframe(
-        obs.sort_values("obs_trend", ascending=False).style.format({"obs_trend": "{:.4f}"})
-    )
+    obs_by_abs_trend = obs.sort_values("obs_trend", key=abs, ascending=False)
+
+    st.dataframe(obs_by_abs_trend.style.format({"obs_trend": "{:.4f}"}))
 
     # st.dataframe(sim)
 
-    district = st.selectbox("Select District for Trend Analysis", options=obs["district"].unique())
+    district = st.selectbox(
+        "Select District for Trend Analysis", options=obs_by_abs_trend["district"].unique()
+    )
 
     visualize_hist(
         sim[sim.district == district]["obs_trend"],
