@@ -2,17 +2,80 @@
 
 ## Why do we need this?
 
-This test quantifies the probability that the observed trend has arisen by chance. By permuting the data, we simulate random scenarios and compare our observed trends with the trends from the simulations.
+Imagine you're tracking monthly water consumption across different districts, or monitoring weekly sales performance. You notice that one district's consumption is steadily increasing—but is this a **real trend** or just **random noise**?
+
+This test answers that question by quantifying the probability that the observed trend could have arisen by pure chance. The key idea: if there's no real trend, then shuffling the time order of your data shouldn't make things much worse. If shuffling destroys a strong pattern, you've found something real.
+
+## The Core Concept: Breaking the Time Connection
+
+**The Logic**: If a trend is real, the sequence matters. Water consumption in January → February → March follows a pattern. But if there's no trend, then January's value could just as easily have occurred in March—it's all random fluctuation.
+
+**The Test**:
+1. Calculate the slope (trend) in your actual data
+2. Shuffle the values across time points thousands of times
+3. Calculate the slope in each shuffled version
+4. Ask: "How often did random shuffling produce a trend as strong as the real one?"
+
+If random shuffling rarely produces such a strong trend, you've confirmed it's **statistically significant**.
+
+## A Simple Example
+
+**Scenario**: You're analyzing monthly ice cream sales (in thousands) over 6 months:
+
+| Month | Sales |
+|-------|-------|
+| Jan   | 10    |
+| Feb   | 12    |
+| Mar   | 15    |
+| Apr   | 18    |
+| May   | 21    |
+| Jun   | 23    |
+
+**Observed slope**: +2.6 (sales increase by ~2,600 units per month)
+
+**The Test**: We shuffle the sales values randomly:
+- One shuffle: [23, 10, 15, 21, 12, 18] → slope = +0.4
+- Another: [15, 18, 10, 23, 12, 21] → slope = +1.2
+- Another: [12, 21, 10, 18, 23, 15] → slope = +0.8
+
+After 10,000 shuffles, we find that only 45 random arrangements produced a slope ≥ 2.6.
+
+**P-value** = 45/10,000 = 0.0045 (0.45%)
+
+**Conclusion**: There's less than a 0.5% chance that random fluctuation alone created this upward trend. The trend is **real and significant**!
 
 ## How does it work?
 
-**Observations and Metrics**
+### Step 1: Measure the Observed Trend
+
+**We calculate three key metrics from the actual data:**
+
+1. **Slope (Trend)**: The rate of change over time
+   - Positive slope = upward trend
+   - Negative slope = downward trend
+   - Example: +2.5 means "increases by 2.5 units per time period"
+
+2. **Aggregated $R^2$**: How consistent is the trend at the group level?
+   - We average values at each time point, then measure fit
+   - Filters out individual noise to reveal the general direction
+   - Closer to 1.0 = very consistent trend
+
+3. **Raw $R^2$**: How much do individuals vary around the trend?
+   - Usually lower because individuals are noisy
+   - Shows how predictable individual behavior is
+
+**Technical Implementation:**
 
 + **Trend:** First, we calculate slope on the raw data, which represents the observed magnitude and direction of the change.
 
 + **Aggregated $R^2$:** We calculate $R^2$ to provide a measure of the trend's reliability. By taking the mean value for each time point, we filter out individual level noise to reveal the general direction of the group.
 
 + **$R^2$:** We also retain the $R^2$ calculated on the raw data. While usually low, this metric indicates how much individual behaviour varies around the general trend.
+
+#### SQL Implementation
+
+<details>
+<summary>Click to view SQL code</summary>
 
 ```sql
 WITH filtered_data AS (
@@ -58,10 +121,20 @@ observed_trend AS (
 ),
 
 ```
+</details>
+
+### Step 2: Create Random Universes (Simulations)
+
+**The Goal**: Generate thousands of "fake" datasets where there's **no real trend**—just random noise.
+
+**How?** We keep the time points fixed (Jan, Feb, Mar...) but randomly shuffle the values. This breaks any real time-value relationship while preserving the data's overall distribution.
 
 **Creating Simulation Table**
 
 + To estimate the probability of observing such a trend by chance, we generate `n_iterations` of random datasets. We use `CROSS JOIN` with `EXPLODE` to replicate dataset.
+
+<details>
+<summary>Click to view SQL code</summary>
 
 ```sql
 iterations AS (
@@ -77,9 +150,21 @@ iterations AS (
 ),
 
 ```
+</details>
 
-+ The core of the permutation test is to eliminate relationship between time and value.
+**The Shuffling Process: Breaking Time's Connection**
 
+**The core logic**: Eliminate the relationship between time and value to simulate a "no trend" world.
+
+**What we do**:
+- **Time points stay fixed**: January is still January, February is still February
+- **Values get randomized**: January's actual value might get randomly assigned to March
+- This simulates a world where the values have no time-dependent pattern
+
+**Think of it like this**:
+> You have 12 numbered envelopes (months) and 12 values written on cards. In reality, the cards are in order inside the envelopes. We pull all cards out, shuffle them, and randomly put them back into the envelopes. If the original "in-order" arrangement produced a significantly stronger trend than the shuffled versions, the trend was real.
+
+**Technical details**:
 + We keep the time column (`range_col`) ordered. Then, we randomize the `value_col` using `ROW_NUMBER() OVER (PARTITION BY iteration, {group_col} ORDER BY rand())` for each iteration.
 
 + Finally, we join the randomized values to the fixed time points using the condition: `ON a.iteration = b.iteration AND
@@ -88,8 +173,10 @@ iterations AS (
 
 + Note that `b.{value_col}` represents the randomized values.
 
-```sql
+<details>
+<summary>Click to view SQL code</summary>
 
+```sql
 shuffled_data AS (
     SELECT
         a.iteration,
@@ -118,18 +205,32 @@ shuffled_data AS (
 ),
 
 ```
+</details>
+
+### Step 3: Compare Real vs. Random
 
 **Final Part - Simulation and P-Value Calculation:**
 
+Now comes the moment of truth: **How unusual is our observed trend?**
+
 + For every simulated scenario (iteration), we calculate the slope of the shuffled data.
 
-+ Finally, we determine the P-Value by calculating the proportion of random scenarios that produced a trend more extreme than our observed trend.
++ Finally, we determine the **P-Value** by calculating the proportion of random scenarios that produced a trend more extreme than our observed trend.
 
-+ **For Positive Trend:** How often did random noise produce a steeper incline?
+**Interpretation:**
 
-+ **For Negative Trend:** How often did random noise produce a steeper decline?
++ **For Positive Trends (upward):** "Out of 10,000 random shuffles, how many produced a slope ≥ our observed slope?"
+  - If only 200 did → p-value = 0.02 (2%)
+  - Conclusion: Very unlikely by chance → **Significant upward trend!**
 
-+ Low p-value indicates that the observed trend is unlikely to be observed by chance
++ **For Negative Trends (downward):** "How many random shuffles produced a slope ≤ our observed slope?"
+  - If only 50 did → p-value = 0.005 (0.5%)
+  - Conclusion: Extremely unlikely by chance → **Significant downward trend!**
+
+**The Bottom Line**: A low p-value (typically < 0.05) means that random chance rarely produces a trend as strong as what we observed. This confirms the trend is **statistically real**, not just noise.
+
+<details>
+<summary>Click to view SQL code</summary>
 
 ```sql
 perm_trends AS (
@@ -165,3 +266,4 @@ JOIN
 GROUP BY
     1,2,3,4
 ```
+</details>
